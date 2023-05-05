@@ -1,5 +1,6 @@
 #include "Application.h"
 #include <GLFW/glfw3.h>
+#include <ratio>
 
 Application::Application(const std::string& title)
 {
@@ -18,9 +19,13 @@ void Application::Run()
         return;
     }
 
+    if (!Load())
+    {
+        return;
+    }
+
     while (!glfwWindowShouldClose(m_window))
     {
-        glfwPollEvents();
         Update();
         Render();
     }
@@ -28,12 +33,7 @@ void Application::Run()
 
 void Application::Cleanup()
 {
-    if (m_window = nullptr)
-    {
-        glfwDestroyWindow(m_window);
-        m_window = nullptr;
-    }
-
+    glfwDestroyWindow(m_window);
     glfwTerminate();
 }
 
@@ -62,6 +62,8 @@ bool Application::Initialize()
     if (m_window == nullptr)
     {
         std::cout << "GLFW: Unable to create window\n";
+        Cleanup();
+        return false;
     }
 
     // Center the window
@@ -69,5 +71,46 @@ bool Application::Initialize()
     const int32_t windowTop = videoMode->height / 2 - m_height / 2;
     glfwSetWindowPos(m_window, windowLeft, windowTop);
 
+    glfwSetWindowUserPointer(m_window, this);
+    glfwSetFramebufferSizeCallback(m_window, HandleResize);
+
+    m_currentTime = std::chrono::high_resolution_clock::now();
     return true;
+}
+
+void Application::OnResize(const int32_t width, const int32_t height)
+{
+    m_width = width;
+    m_height = height;
+}
+
+void Application::HandleResize(GLFWwindow* window, const int32_t width, const int32_t height)
+{
+    Application* application = static_cast<Application*>(glfwGetWindowUserPointer(window));
+    application->OnResize(width, height);
+}
+
+GLFWwindow* Application::GetWindow() const
+{
+    return m_window;
+}
+
+int32_t Application::GetWindowWidth() const
+{
+    return m_width;
+}
+
+int32_t Application::GetWindowHeight() const
+{
+    return m_height;
+}
+
+void Application::Update()
+{
+    auto oldTime = m_currentTime;
+    m_currentTime = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double, std::milli> timeSpan = (m_currentTime - oldTime);
+    m_deltaTIme = static_cast<float> (timeSpan.count() / 1000.0);
+    glfwPollEvents();
 }
